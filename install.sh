@@ -15,14 +15,27 @@ ZSHRC="$HOME/.zshrc"
 # --- Tools ausführbar machen ------------------------------------------------
 chmod +x "$TH_BIN" "$TH_PICK" 2>/dev/null || true
 
-# --- Hook in .zshrc eintragen (idempotent) ----------------------------------
-MARKER="# >>> terminal-history >>>"
-if grep -qF "$MARKER" "$ZSHRC" 2>/dev/null; then
-  echo "Hook ist bereits in $ZSHRC eingetragen."
+# --- Hook in .zshrc eintragen (idempotent, upgrade-fähig) -------------------
+# Zwei Marker (Anfang/Ende) rahmen den verwalteten Block ein. Nur wenn die
+# source-Zeile UND die th()-Funktion vorhanden sind, ist alles aktuell.
+# Ansonsten wird der alte Block inkl. veralteter Alias-Zeilen ersetzt.
+MARKER_START="# >>> terminal-history >>>"
+MARKER_END="# <<< terminal-history <<<"
+
+if grep -qF "$HOOK_FILE" "$ZSHRC" 2>/dev/null \
+   && grep -q '^th()' "$ZSHRC" 2>/dev/null \
+   && ! grep -qE '^[[:space:]]*alias[[:space:]]+th=' "$ZSHRC" 2>/dev/null; then
+  echo "Hook und Funktion th() sind bereits aktuell in $ZSHRC eingetragen."
 else
+  TMP="$(mktemp -t terminal_history 2>/dev/null || mktemp)"
+  sed \
+    -e '/>>> terminal-history >>>/,/<<< terminal-history <<</d' \
+    -e '/^[[:space:]]*alias[[:space:]]\+th=/d' \
+    "$ZSHRC" > "$TMP" && mv "$TMP" "$ZSHRC"
+
   cat >> "$ZSHRC" <<EOF
 
-$MARKER
+$MARKER_START
 source "$HOOK_FILE"
 th() {
   if [[ \$# -eq 0 ]]; then
@@ -38,9 +51,9 @@ th() {
     "$TH_BIN" "\$@"
   fi
 }
-# <<< terminal-history <<<
+$MARKER_END
 EOF
-  echo "Hook in $ZSHRC eingetragen."
+  echo "Hook und Funktion th() in $ZSHRC eingetragen."
 fi
 
 echo ""
