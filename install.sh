@@ -24,6 +24,7 @@ MARKER_END="# <<< terminal-history <<<"
 
 if grep -qF "$HOOK_FILE" "$ZSHRC" 2>/dev/null \
    && grep -q '^th()' "$ZSHRC" 2>/dev/null \
+   && grep -qF 'unalias th' "$ZSHRC" 2>/dev/null \
    && ! grep -qE '^[[:space:]]*alias[[:space:]]+th=' "$ZSHRC" 2>/dev/null; then
   echo "Hook und Funktion th() sind bereits aktuell in $ZSHRC eingetragen."
 else
@@ -37,6 +38,9 @@ else
 
 $MARKER_START
 source "$HOOK_FILE"
+# Ein evtl. noch aktiver alter Alias th=... wuerde das Parsen der
+# Funktionsdefinition unten sprengen ("parse error near ()") – entfernen.
+unalias th 2>/dev/null || true
 th() {
   if [[ \$# -eq 0 ]]; then
     local tmp picked
