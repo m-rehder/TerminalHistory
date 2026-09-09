@@ -1,32 +1,32 @@
 #!/bin/zsh
 # =============================================================================
-#  th-pick – Interaktiver Picker für die Terminal History
-#  Navigation mit Cursor-Tasten (↑/↓, PgUp/PgDn, Home/End) oder Mausklick.
-#  Tippen filtert, Enter kopiert den Befehl in die Eingabezeile (ohne Ausführen).
-#  Neueste Einträge stehen oben.
+#  th-pick - Interactive picker for the terminal history
+#  Navigate with arrow keys (↑/↓, PgUp/PgDn, Home/End) or mouse click.
+#  Typing filters, Enter copies the command to the command line (no execution).
+#  Newest entries on top.
 #
-#  Die TUI wird auf /dev/tty geschrieben, der gewählte Befehl auf stdout.
-#  Auf Abbruch wird "__TH_NO_SELECT__" ausgegeben.
+#  The TUI is written to /dev/tty, the selected command to stdout.
+#  On cancel, "__TH_NO_SELECT__" is printed.
 # =============================================================================
 
 : "${TH_HISTORY_FILE:=$HOME/.terminal_history.jsonl}"
 FILE="${1:-$TH_HISTORY_FILE}"
-OUTFILE="${2:-}"   # optional: Ergebnisdatei (zusätzlich zu stdout)
+OUTFILE="${2:-}"   # optional: result file (in addition to stdout)
 
-[[ -f "$FILE" ]] || { echo "History-Datei nicht gefunden: $FILE" >&2; exit 1; }
+[[ -f "$FILE" ]] || { echo "History file not found: $FILE" >&2; exit 1; }
 
-# --- TTY für Anzeige (fd 3) und Eingabe (fd 4) öffnen ------------------------
+# --- Open TTY for display (fd 3) and input (fd 4) ----------------------------
 TTY=/dev/tty
-# /dev/tty existiert auch ohne Controlling-Terminal -- erst das Öffnen zeigt,
-# ob wirklich ein Terminal da ist (z.B. in ": < /dev/tty" scheitert sauber).
+# /dev/tty exists even without a controlling terminal -- only opening it shows
+# whether a terminal is really there (": < /dev/tty" fails cleanly otherwise).
 if ! { : <"$TTY"; } 2>/dev/null || ! { : >"$TTY"; } 2>/dev/null; then
-  echo "th-pick: Kein Terminal (/dev/tty) verfügbar." >&2
+  echo "th-pick: No terminal (/dev/tty) available." >&2
   exit 1
 fi
-exec 3>"$TTY" 2>/dev/null || { echo "th-pick: Kein Terminal verfügbar." >&2; exit 1; }
-exec 4<"$TTY" 2>/dev/null || { echo "th-pick: Kein Terminal verfügbar." >&2; exit 1; }
+exec 3>"$TTY" 2>/dev/null || { echo "th-pick: No terminal available." >&2; exit 1; }
+exec 4<"$TTY" 2>/dev/null || { echo "th-pick: No terminal available." >&2; exit 1; }
 
-# --- Terminal-Modus sichern; Aufräumen bei Beendigung ------------------------
+# --- Save terminal mode; clean up on exit -------------------------------------
 SAVED_STTY="$(stty -g <"$TTY" 2>/dev/null)"
 UI_STARTED=0
 
@@ -39,16 +39,16 @@ cleanup() {
   exec 4<&- 2>/dev/null
 }
 trap cleanup EXIT
-trap 'exit 130' INT   # explizit beenden, damit keine Endlosschleife entsteht
+trap 'exit 130' INT   # exit explicitly so no endless loop can occur
 trap 'exit 143' TERM
 
-# --- Einträge laden ----------------------------------------------------------
-# Transportformat: Felder durch \x1f (US), Datensätze durch \x1e (RS) getrennt.
-# So bleiben auch mehrzeilige Befehle und Tabs rundtriebfest erhalten.
+# --- Load entries ------------------------------------------------------------
+# Transport format: fields separated by \x1f (US), records by \x1e (RS).
+# This keeps even multi-line commands and tabs round-trip safe.
 TMP=$(mktemp -t thpick 2>/dev/null || mktemp)
 awk '
 function getval(s, key,   i, start, end, c, val, bs, PH) {
-  PH = sprintf("%c", 1)   # Platzhalter für escaped Backslashes (\x01)
+  PH = sprintf("%c", 1)   # placeholder for escaped backslashes (\x01)
   i = index(s, "\"" key "\":\"")
   if (i == 0) return ""
   start = i + length(key) + 4
@@ -56,8 +56,8 @@ function getval(s, key,   i, start, end, c, val, bs, PH) {
   while (end <= length(s)) {
     c = substr(s, end, 1)
     if (c == "\"") {
-      # Quote beendet den String nur, wenn sie NICHT escaped ist,
-      # also eine gerade Anzahl Backslashes davor steht (\"", \\" beachten).
+      # A quote only terminates the string if it is NOT escaped,
+      # i.e. preceded by an even number of backslashes (\", \\ matter).
       bs = 0
       while (substr(s, end - bs - 1, 1) == "\\") bs++
       if (bs % 2 == 0) break
@@ -96,25 +96,25 @@ if (( TOTAL == 0 )); then
   exit 0
 fi
 
-# --- Ergebnis ausgeben -------------------------------------------------------
+# --- Emit result --------------------------------------------------------------
 emit() {
   printf '%s\n' "$1"
   [[ -n "$OUTFILE" ]] && printf '%s\n' "$1" > "$OUTFILE"
 }
 no_select() { emit '__TH_NO_SELECT__'; }
 
-# --- Terminalgröße -----------------------------------------------------------
+# --- Terminal size -------------------------------------------------------------
 get_size() {
   local size
   size="$(stty size <"$TTY" 2>/dev/null)"
   HEIGHT="${size%% *}"
   WIDTH="${size##* }"
-  # Degenerierte Werte (z.B. pty ohne Größe) abfangen
+  # Guard against degenerate values (e.g. pty without size)
   (( HEIGHT < 5 )) && HEIGHT=24
   (( WIDTH < 20 )) && WIDTH=80
 }
 
-# --- Filterung (neueste Einträge zuerst) -------------------------------------
+# --- Filtering (newest entries first) -----------------------------------------
 typeset -a FILT
 filter() {
   FILT=()
@@ -126,7 +126,7 @@ filter() {
   done
 }
 
-# --- Sichtbarer Fensteranfang ------------------------------------------------
+# --- Visible window start ------------------------------------------------------
 win_start() {
   local rows=$((HEIGHT - 2))
   local s=$((sel - rows + 1))
@@ -134,7 +134,7 @@ win_start() {
   echo $s
 }
 
-# --- Rendern -----------------------------------------------------------------
+# --- Render --------------------------------------------------------------------
 render() {
   get_size
   local rows=$((HEIGHT - 2))
@@ -144,13 +144,13 @@ render() {
   local out=""
   out+=$'\e[H\e[2J'
   out+=$'\e[1;36mTerminal History\e[0m  '
-  out+=$'\e[2m↑/↓ wählen · Enter kopieren · tippen = suchen · q/Esc = abbrechen\e[0m'
+  out+=$'\e[2m↑/↓ select · Enter copy · type = search · q/Esc = cancel\e[0m'
   out+=$'\n'
   local i idx cmdline
   for ((i=start; i<=end; i++)); do
     idx=${FILT[$i]}
     cmdline="${CMD[$idx]}"
-    # Mehrzeilige Befehle / Tabs für die EINZEILIGE Anzeige umformen
+    # Reformat multi-line commands / tabs for the SINGLE-LINE display
     cmdline="${cmdline//$'\n'/⏎}"
     cmdline="${cmdline//$'\t'/    }"
     (( ${#cmdline} > WIDTH - 4 )) && cmdline="${cmdline[1,WIDTH-4]}…"
@@ -163,24 +163,24 @@ render() {
   done
   out+=$'\e[0m'
   out+=$'\e[2m'  # footer
-  out+="  ${#FILT[@]} Einträge"
-  [[ -n "$query" ]] && out+="  ·  Suche: $query"
+  out+="  ${#FILT[@]} entries"
+  [[ -n "$query" ]] && out+="  ·  filter: $query"
   out+=$'\e[0m'
   printf '%s' "$out" >&3
 }
 
-# --- Tastendruck lesen -------------------------------------------------------
+# --- Read a keypress -----------------------------------------------------------
 read_key() {
   local k k2 k3
-  read -k1 k <&4 || return 1     # EOF/Fehler -> Abbruchsignal an Hauptschleife
+  read -k1 k <&4 || return 1     # EOF/error -> cancel signal to main loop
   if [[ "$k" == $'\e' ]]; then
-    # Esc-Sequenz oder Esc allein? Kurz auf ein Folge-Byte warten,
-    # sonst blockiert das Read und Esc kann nicht abbrechen.
+    # Escape sequence or a lone Esc? Wait briefly for a following byte,
+    # otherwise the read blocks and Esc cannot cancel.
     if read -k1 -t 0.1 k2 <&4; then
       if [[ "$k2" == '[' ]]; then
         read -k1 k3 <&4 || return 1
         if [[ "$k3" == 'M' ]]; then
-          # X10-Maus: ESC [ M <btn+32> <col+32> <row+32>
+          # X10 mouse: ESC [ M <btn+32> <col+32> <row+32>
           local b x y
           read -k1 b <&4; read -k1 x <&4; read -k1 y <&4
           echo "MOUSE $(printf '%d' "'$b") $(printf '%d' "'$x") $(printf '%d' "'$y")"
@@ -206,10 +206,10 @@ read_key() {
           *) echo IGNORE;;
         esac
       else
-        echo IGNORE   # z.B. Alt+Taste
+        echo IGNORE   # e.g. Alt+key
       fi
     else
-      echo ESC        # allein gedrücktes Esc
+      echo ESC        # Esc pressed alone
     fi
   elif [[ "$k" == $'\n' || "$k" == $'\r' ]]; then
     echo ENTER
@@ -225,20 +225,20 @@ read_key() {
   return 0
 }
 
-# --- Hauptschleife -----------------------------------------------------------
+# --- Main loop -----------------------------------------------------------------
 query=""
 sel=1
 filter
 
-# Terminal in passenden Modus versetzen (Echo aus, Zeilenpuffer aus,
-# Signaltasten als Bytes liefern, Cursor aus, Maus an)
+# Put terminal into the right mode (echo off, line buffering off,
+# signal keys delivered as bytes, cursor hidden, mouse on)
 stty -echo -icanon -isig min 1 time 0 <"$TTY" 2>/dev/null
 printf '\e[?25l\e[?1000h' >&3
 UI_STARTED=1
 render
 
 while true; do
-  key=$(read_key) || break   # EOF/Fehler beim Lesen -> beenden
+  key=$(read_key) || break   # EOF/error while reading -> exit
   case "$key" in
     UP)    (( sel > 1 )) && (( sel-- ));;
     DOWN)  (( sel < ${#FILT[@]} )) && (( sel++ ));;
@@ -267,7 +267,7 @@ while true; do
     MOUSE*)
       set -- ${=key}
       local b=$2 x=$3 y=$4
-      if (( b == 32 )) && (( y - 32 >= 2 )); then   # linker Mausklick, nicht auf Kopfzeile
+      if (( b == 32 )) && (( y - 32 >= 2 )); then   # left mouse click, not on header line
         local start=$(win_start)
         local idx=$(( start + (y - 32) - 2 ))
         if (( idx >= 1 && idx <= ${#FILT[@]} )); then

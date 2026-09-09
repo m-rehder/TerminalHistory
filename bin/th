@@ -1,23 +1,23 @@
 #!/bin/zsh
 # =============================================================================
-#  th – Terminal History CLI
-#  Interaktiver Picker + Anzeige, Suche und Löschen.
+#  th - Terminal History CLI
+#  Interactive picker plus listing, search and delete.
 #
-#  Verwendung:
-#    th                     Interaktiver Picker (↑/↓ oder Maus, Enter = kopieren)
-#    th -l                  Letzte 50 Einträge anzeigen
-#    th -n 200              Letzte 200 Einträge anzeigen
-#    th -s "git"            Nach "git" suchen
-#    th -d <id>             Einzelnen Eintrag löschen
-#    th -c                  Komplette History löschen
-#    th -e <datei>          History als Text exportieren
-#    th -f <datei>          Andere History-Datei verwenden
+#  Usage:
+#    th                     Interactive picker (↑/↓ or mouse, Enter = copy)
+#    th -l                  Show the last 50 entries
+#    th -n 200              Show the last 200 entries
+#    th -s "git"            Search for "git"
+#    th -d <id>             Delete a single entry
+#    th -c                  Clear the whole history
+#    th -e <file>           Export history as text
+#    th -f <file>           Use a different history file
 # =============================================================================
 
 : "${TH_HISTORY_FILE:=$HOME/.terminal_history.jsonl}"
 
-# Skriptpfad vorweg merken: Innerhalb von Funktionen ersetzt zsh
-# (Option FUNCTION_ARGZERO) $0 durch den Funktionsnamen.
+# Remember the script path upfront: inside functions zsh
+# (option FUNCTION_ARGZERO) replaces $0 with the function name.
 TH_SELF="$0"
 
 FILE="$TH_HISTORY_FILE"
@@ -33,87 +33,87 @@ usage() {
   exit "${1:-0}"
 }
 
-# --- Argumente parsen --------------------------------------------------------
+# --- Parse arguments ---------------------------------------------------------
 while (( $# )); do
   case "$1" in
     -l) LIST=1; shift ;;
     -n)
       if (( $# < 2 )) || [[ "$2" != <-> ]]; then
-        echo "th: -n braucht eine Zahl (z.B. -n 200)." >&2; exit 1
+        echo "th: -n needs a number (e.g. -n 200)." >&2; exit 1
       fi
       LIMIT="$2"; LIST=1; shift 2 ;;
     -s)
       if (( $# < 2 )); then
-        echo "th: -s braucht einen Suchbegriff." >&2; exit 1
+        echo "th: -s needs a search term." >&2; exit 1
       fi
       SEARCH="$2"; LIST=1; shift 2 ;;
     -d)
       if (( $# < 2 )); then
-        echo "th: -d braucht eine ID." >&2; exit 1
+        echo "th: -d needs an ID." >&2; exit 1
       fi
       DELETE_ID="$2"; shift 2 ;;
     -c) CLEAR=1; shift ;;
     -e)
       if (( $# < 2 )); then
-        echo "th: -e braucht einen Dateinamen." >&2; exit 1
+        echo "th: -e needs a filename." >&2; exit 1
       fi
       EXPORT="$2"; shift 2 ;;
     -f)
       if (( $# < 2 )); then
-        echo "th: -f braucht einen Dateinamen." >&2; exit 1
+        echo "th: -f needs a filename." >&2; exit 1
       fi
       FILE="$2"; shift 2 ;;
     -h|--help) usage ;;
-    *) echo "Unbekannte Option: $1" >&2; usage 1 ;;
+    *) echo "Unknown option: $1" >&2; usage 1 ;;
   esac
 done
 
-[[ -f "$FILE" ]] || { echo "History-Datei nicht gefunden: $FILE" >&2; exit 1; }
+[[ -f "$FILE" ]] || { echo "History file not found: $FILE" >&2; exit 1; }
 
-# --- Ohne Argumente: interaktiver Picker -------------------------------------
+# --- No arguments: interactive picker ----------------------------------------
 if (( ! LIST && ! CLEAR )) && [[ -z "$DELETE_ID" && -z "$EXPORT" ]]; then
   exec "$(dirname "$0")/th-pick" "$FILE"
 fi
 
-# --- Komplett löschen -------------------------------------------------------
+# --- Clear everything --------------------------------------------------------
 if (( CLEAR )); then
-  read -q "?Wirklich die komplette History löschen? (j/N) " || { echo; exit 0; }
+  read -q "?Really clear the entire history? (y/N) " || { echo; exit 0; }
   echo
   : > "$FILE"
-  echo "History gelöscht."
+  echo "History cleared."
   exit 0
 fi
 
-# --- Einzelnen Eintrag löschen ----------------------------------------------
+# --- Delete a single entry ---------------------------------------------------
 if [[ -n "$DELETE_ID" ]]; then
   TH_NEEDLE="\"id\":\"$DELETE_ID\""
   if grep -qF -- "$TH_NEEDLE" "$FILE"; then
     grep -vF -- "$TH_NEEDLE" "$FILE" > "$FILE.tmp.$$" && mv "$FILE.tmp.$$" "$FILE"
-    echo "Eintrag $DELETE_ID gelöscht."
+    echo "Entry $DELETE_ID deleted."
   else
-    echo "Eintrag $DELETE_ID nicht gefunden." >&2
+    echo "Entry $DELETE_ID not found." >&2
     exit 1
   fi
   exit 0
 fi
 
-# --- Export ----------------------------------------------------------------
+# --- Export ------------------------------------------------------------------
 if [[ -n "$EXPORT" ]]; then
   if [[ -n "$SEARCH" ]]; then
     grep -iF -- "$SEARCH" "$FILE" > "$EXPORT"
   else
     cp "$FILE" "$EXPORT"
   fi
-  echo "Exportiert nach: $EXPORT"
+  echo "Exported to: $EXPORT"
   exit 0
 fi
 
-# --- Anzeigen ---------------------------------------------------------------
-# JSONL zeilenweise parsen und die LETZTEN limit Einträge formatiert ausgeben
-# (chronologisch: neuster Eintrag unten, direkt über dem Prompt)
+# --- List --------------------------------------------------------------------
+# Parse JSONL line by line and print the LAST limit entries formatted
+# (chronological: newest entry at the bottom, right above the prompt)
 OUTPUT=$(awk -v limit="$LIMIT" -v search="$SEARCH" '
 function getval(s, key,   i, start, end, c, val, bs, PH) {
-  PH = sprintf("%c", 1)   # Platzhalter für escaped Backslashes (Steuerzeichen \x01)
+  PH = sprintf("%c", 1)   # placeholder for escaped backslashes (control char \x01)
   i = index(s, "\"" key "\":\"")
   if (i == 0) return ""
   start = i + length(key) + 4
@@ -121,8 +121,8 @@ function getval(s, key,   i, start, end, c, val, bs, PH) {
   while (end <= length(s)) {
     c = substr(s, end, 1)
     if (c == "\"") {
-      # Nur eine Quote beendet den String, wenn sie NICHT escaped ist,
-      # also eine gerade Anzahl Backslashes davor steht (\"", \\" beachten).
+      # A quote only terminates the string if it is NOT escaped,
+      # i.e. preceded by an even number of backslashes (\", \\ matter).
       bs = 0
       while (substr(s, end - bs - 1, 1) == "\\") bs++
       if (bs % 2 == 0) break
@@ -130,7 +130,7 @@ function getval(s, key,   i, start, end, c, val, bs, PH) {
     end++
   }
   val = substr(s, start, end - start)
-  # JSON-Unescape: erst \\ parken, dann Kurzescapes, dann Backslash zurück
+  # JSON unescape: park \\ first, then short escapes, then restore backslash
   gsub(/\\\\/, PH, val)
   gsub(/\\"/, "\"", val)
   gsub(/\\n/, "\n", val)
@@ -141,7 +141,7 @@ function getval(s, key,   i, start, end, c, val, bs, PH) {
 }
 {
   if ($0 !~ /^\{.*\}$/) next
-  # Literale (nicht-Regex) Suche über die ganze Zeile
+  # Literal (non-regex) search over the whole line
   if (search != "" && index(tolower($0), tolower(search)) == 0) next
 
   n++
@@ -166,5 +166,5 @@ END {
 
 printf '%s' "$OUTPUT"
 if [[ -z "$OUTPUT" ]]; then
-  echo "Keine Einträge gefunden."
+  echo "No entries found."
 fi

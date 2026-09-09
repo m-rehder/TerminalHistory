@@ -1,82 +1,82 @@
 # Terminal History
 
-Eine Erweiterung für das **Apple Terminal** (macOS), die jeden eingegebenen Befehl
-in einer persistenten Liste speichert – auch nach dem Schließen des Terminals.
-Passwörter und Geheimnisse werden automatisch geschwärzt.
+An extension for the **Apple Terminal** (macOS) that stores every command you
+enter in a persistent list — kept even after the terminal is closed.
+Passwords and secrets are automatically redacted.
 
-Da Terminal.app selbst kein Plugin-System hat, basiert die Lösung auf einem
-**zsh-Hook** (zsh ist die Standard-Shell auf macOS).
+Since Terminal.app itself has no plugin system, the solution is based on a
+**zsh hook** (zsh is the default shell on macOS).
 
 ## Installation
 
 ```bash
-cd /Users/maik/Projects/TerminalHistory
+cd /path/to/TerminalHistory
 ./install.sh
 source ~/.zshrc
 ```
 
-Der Installer trägt den Hook in deine `~/.zshrc` ein und legt das `th`-Kommando an.
+The installer registers the hook in your `~/.zshrc` and sets up the `th` command.
 
-## Verwendung
+## Usage
 
-| Befehl | Beschreibung |
-|--------|--------------|
-| `th` | **Interaktiver Picker** – Befehl mit ↑/↓ oder Mausklick wählen, Enter kopiert ihn in die Eingabezeile (ohne Ausführen) |
-| `th -l` | Letzte 50 Befehle anzeigen |
-| `th -n 200` | Letzte 200 Befehle anzeigen |
-| `th -s "git"` | Nach einem Begriff suchen |
-| `th -d <id>` | Einzelnen Eintrag löschen |
-| `th -c` | Komplette History löschen (mit Sicherheitsabfrage) |
-| `th -e datei.txt` | History als Text exportieren |
-| `th -f datei.jsonl` | Andere History-Datei verwenden |
+| Command | Description |
+|---------|-------------|
+| `th` | **Interactive picker** – select a command with ↑/↓ or a mouse click, Enter copies it to the command line (without executing) |
+| `th -l` | Show the last 50 commands |
+| `th -n 200` | Show the last 200 commands |
+| `th -s "git"` | Search for a term |
+| `th -d <id>` | Delete a single entry |
+| `th -c` | Clear the entire history (with confirmation prompt) |
+| `th -e file.txt` | Export history as text |
+| `th -f file.jsonl` | Use a different history file |
 
-### Interaktiver Picker (`th`)
+### Interactive picker (`th`)
 
-Öffnet eine auswählbare Liste (neueste Befehle oben). Navigation:
+Opens a selectable list (newest commands first). Navigation:
 
-- **↑ / ↓** – Auswahl bewegen
-- **PgUp / PgDn / Home / End** – springen
-- **Mausklick** – Eintrag direkt wählen
-- **Tippen** – live filtern (Suche)
-- **Enter** – Befehl in die Eingabezeile kopieren (wird **nicht** ausgeführt)
-- **q / Esc / Ctrl-C** – abbrechen
+- **↑ / ↓** – move selection
+- **PgUp / PgDn / Home / End** – jump
+- **Mouse click** – select an entry directly
+- **Typing** – live filter (search)
+- **Enter** – copy the command to the command line (**not** executed)
+- **q / Esc / Ctrl-C** – cancel
 
-Der gewählte Befehl landet per `print -z` in der aktuellen Eingabezeile – du kannst ihn
-noch bearbeiten und dann selbst mit Enter ausführen.
+The selected command is placed in the current command line via `print -z` – you
+can still edit it and then execute it yourself with Enter.
 
-## Wie es funktioniert
+## How it works
 
-- **Aufzeichnung:** Ein `preexec`-Hook fängt jeden Befehl ab, ein `precmd`-Hook
-  trägt den Exit-Status nach. Gespeichert wird in
+- **Recording:** A `preexec` hook captures every command, a `precmd` hook
+  adds the exit status afterwards. Entries are stored in
   `~/.terminal_history.jsonl` (JSON Lines).
-- **Persistenz:** Die Datei bleibt nach dem Schließen des Terminals erhalten.
-- **Passwort-Schutz:** Die Funktion `th_redact` schwärzt automatisch:
-  - `VAR=wert`-Zuweisungen mit `PASS`, `PASSWORD`, `PASSWD`, `PWD`, `TOKEN`, `SECRET`, `KEY`, `CREDENTIAL`, `AUTH` (auch in Anführungszeichen)
-  - `--password=wert`, `--token=wert`, `--secret=wert`, … (auch in Anführungszeichen)
-  - `-pWERT` (mysql, psql, …) und `sshpass -p WERT`
-  - `-u benutzer:passwort` / `--user benutzer:passwort` (curl & Co.)
-  - `benutzer:passwort@` in URLs / SSH
-- **Größenbegrenzung:** Standardmäßig werden max. 10.000 Einträge behalten
-  (einstellbar über `TH_MAX_ENTRIES`).
+- **Persistence:** The file survives after the terminal is closed.
+- **Password protection:** The `th_redact` function automatically redacts:
+  - `VAR=value` assignments containing `PASS`, `PASSWORD`, `PASSWD`, `PWD`, `TOKEN`, `SECRET`, `KEY`, `CREDENTIAL`, `AUTH` (quoted values included)
+  - `--password=value`, `--token=value`, `--secret=value`, … (quoted values included)
+  - `-pVALUE` (mysql, psql, …) and `sshpass -p VALUE`
+  - `-u user:password` / `--user user:password` (curl & co.)
+  - `user:password@` in URLs / SSH
+- **Size limit:** By default at most 10,000 entries are kept
+  (configurable via `TH_MAX_ENTRIES`).
 
-## Konfiguration
+## Configuration
 
-In `terminal_history.zsh` (oder als Umgebungsvariable):
+In `terminal_history.zsh` (or as environment variables):
 
-| Variable | Standard | Bedeutung |
-|----------|----------|-----------|
-| `TH_HISTORY_FILE` | `~/.terminal_history.jsonl` | Pfad zur History-Datei |
-| `TH_MAX_ENTRIES` | `10000` | Maximale Anzahl Einträge (`0` = unbegrenzt) |
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `TH_HISTORY_FILE` | `~/.terminal_history.jsonl` | Path to the history file |
+| `TH_MAX_ENTRIES` | `10000` | Maximum number of entries (`0` = unlimited) |
 
-## Dateien
+## Files
 
-- `terminal_history.zsh` – der zsh-Hook (Aufzeichnung + Schwärzung)
-- `bin/th` – CLI-Tool zum Anzeigen, Suchen, Löschen, Exportieren
-- `bin/th-pick` – interaktiver Picker (Cursor-Tasten + Mausklick)
-- `install.sh` – Installer für `~/.zshrc`
+- `terminal_history.zsh` – the zsh hook (recording + redaction)
+- `bin/th` – CLI tool for listing, searching, deleting, exporting
+- `bin/th-pick` – interactive picker (arrow keys + mouse click)
+- `install.sh` – installer for `~/.zshrc`
 
-## Deinstallation
+## Uninstallation
 
-Entferne den Block zwischen `# >>> terminal-history >>>` und
-`# <<< terminal-history <<<` aus deiner `~/.zshrc` und lösche optional
+Remove the block between `# >>> terminal-history >>>` and
+`# <<< terminal-history <<<` from your `~/.zshrc` and optionally delete
 `~/.terminal_history.jsonl`.

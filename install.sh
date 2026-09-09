@@ -1,7 +1,7 @@
 #!/bin/zsh
 # =============================================================================
-#  Terminal History – Installer
-#  Trägt den zsh-Hook in die ~/.zshrc ein und macht das th-Tool nutzbar.
+#  Terminal History - Installer
+#  Registers the zsh hook in ~/.zshrc and makes the th tool usable.
 # =============================================================================
 
 set -e
@@ -12,13 +12,13 @@ TH_BIN="$SCRIPT_DIR/bin/th"
 TH_PICK="$SCRIPT_DIR/bin/th-pick"
 ZSHRC="$HOME/.zshrc"
 
-# --- Tools ausführbar machen ------------------------------------------------
+# --- Make the tools executable ------------------------------------------------
 chmod +x "$TH_BIN" "$TH_PICK" 2>/dev/null || true
 
-# --- Hook in .zshrc eintragen (idempotent, upgrade-fähig) -------------------
-# Zwei Marker (Anfang/Ende) rahmen den verwalteten Block ein. Nur wenn die
-# source-Zeile UND die th()-Funktion vorhanden sind, ist alles aktuell.
-# Ansonsten wird der alte Block inkl. veralteter Alias-Zeilen ersetzt.
+# --- Register hook in .zshrc (idempotent, upgrade-safe) -----------------------
+# Two markers (start/end) frame the managed block. Only when the
+# source line AND the th() function are present is everything current.
+# Otherwise the old block including outdated alias lines is replaced.
 MARKER_START="# >>> terminal-history >>>"
 MARKER_END="# <<< terminal-history <<<"
 
@@ -26,7 +26,7 @@ if grep -qF "$HOOK_FILE" "$ZSHRC" 2>/dev/null \
    && grep -q '^th()' "$ZSHRC" 2>/dev/null \
    && grep -qF 'unalias th' "$ZSHRC" 2>/dev/null \
    && ! grep -qE '^[[:space:]]*alias[[:space:]]+th=' "$ZSHRC" 2>/dev/null; then
-  echo "Hook und Funktion th() sind bereits aktuell in $ZSHRC eingetragen."
+  echo "Hook and th() function are already up to date in $ZSHRC."
 else
   TMP="$(mktemp -t terminal_history 2>/dev/null || mktemp)"
   sed \
@@ -38,8 +38,8 @@ else
 
 $MARKER_START
 source "$HOOK_FILE"
-# Ein evtl. noch aktiver alter Alias th=... wuerde das Parsen der
-# Funktionsdefinition unten sprengen ("parse error near ()") – entfernen.
+# A possibly still active old alias th=... would break parsing of the
+# function definition below ("parse error near ()") – remove it.
 unalias th 2>/dev/null || true
 th() {
   if [[ \$# -eq 0 ]]; then
@@ -57,19 +57,19 @@ th() {
 }
 $MARKER_END
 EOF
-  echo "Hook und Funktion th() in $ZSHRC eingetragen."
+  echo "Hook and th() function registered in $ZSHRC."
 fi
 
 echo ""
-echo "Fertig! Damit es wirksam wird:"
+echo "Done! To activate it:"
 echo "  source ~/.zshrc"
 echo ""
-echo "Verwendung:"
-echo "  th              # interaktiver Picker (↑/↓ oder Maus, Enter = kopieren)"
-echo "  th -l           # letzte 50 Befehle anzeigen"
-echo "  th -n 200       # letzte 200 anzeigen"
-echo "  th -s 'git'     # nach 'git' suchen"
-echo "  th -d <id>      # einzelnen Eintrag löschen"
-echo "  th -c           # komplette History löschen"
+echo "Usage:"
+echo "  th              # interactive picker (↑/↓ or mouse, Enter = copy)"
+echo "  th -l           # show the last 50 commands"
+echo "  th -n 200       # show the last 200"
+echo "  th -s 'git'     # search for 'git'"
+echo "  th -d <id>      # delete a single entry"
+echo "  th -c           # clear the whole history"
 echo ""
-echo "History-Datei: $HOME/.terminal_history.jsonl"
+echo "History file: $HOME/.terminal_history.jsonl"
