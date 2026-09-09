@@ -9,11 +9,21 @@ Since Terminal.app itself has no plugin system, the solution is based on a
 
 ## Installation
 
-```bash
-cd /path/to/TerminalHistory
-./install.sh
-source ~/.zshrc
-```
+Requires **macOS** with **zsh** (the default shell).
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/m-rehder/TerminalHistory.git
+   cd TerminalHistory
+   ```
+
+2. Run the installer and reload your shell:
+
+   ```bash
+   ./install.sh
+   source ~/.zshrc
+   ```
 
 The installer registers the hook in your `~/.zshrc` and sets up the `th` command.
 
