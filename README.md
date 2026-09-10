@@ -3,7 +3,6 @@
 [![Platform: macOS](https://img.shields.io/badge/platform-macOS-lightgrey)](https://github.com/m-rehder/TerminalHistory)
 [![Shell: zsh](https://img.shields.io/badge/shell-zsh-blue)](https://www.zsh.org/)
 [![GitHub](https://img.shields.io/badge/GitHub-m--rehder%2FTerminalHistory-181717?logo=github)](https://github.com/m-rehder/TerminalHistory)
-[![GitLab](https://img.shields.io/badge/GitLab-maganati%2FTerminalHistory-FC6D26?logo=gitlab)](https://gitlab.com/maganati/TerminalHistory)
 
 An extension for the **Apple Terminal** (macOS) that stores every command you
 enter in a persistent list — kept even after the terminal is closed.
@@ -89,14 +88,6 @@ In `terminal_history.zsh` (or as environment variables):
 - `bin/th` – CLI tool for listing, searching, deleting, exporting
 - `bin/th-pick` – interactive picker (arrow keys + mouse click)
 - `install.sh` – installer for `~/.zshrc`
-
-## Mirrors
-
-This repository is kept in sync on multiple hosts:
-
-- **GitHub:** https://github.com/m-rehder/TerminalHistory
-- **GitLab:** https://gitlab.com/maganati/TerminalHistory
-- plus a private, self-hosted Gitea mirror
 
 ## Uninstallation
 
